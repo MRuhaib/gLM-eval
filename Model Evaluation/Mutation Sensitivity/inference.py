@@ -24,17 +24,13 @@ models = [
     # Do batch inference for above models.
     ["Hyena-16k", "LongSafari/hyenadna-tiny-16k-seqlen-d128-hf"],
     ["Hyena-32k", "LongSafari/hyenadna-small-32k-seqlen-hf"],
-    [
-        "GenaLM",
-        "AIRI-Institute/gena-lm-bigbird-base-t2t",
-    ],  # Gives some error for the .74 and 1x sequences as well; some tensor mismatch.
+    ["GenaLM", "AIRI-Institute/gena-lm-bigbird-base-t2t"],
+    # Gives some error for the .74 and 1x sequences as well; some tensor mismatch.
     ["DNABERT-S", "zhihan1996/DNABERT-S"],
     ["Hyena-160k", "LongSafari/hyenadna-medium-160k-seqlen-hf"],
     ["Hyena-450k", "LongSafari/hyenadna-medium-450k-seqlen-hf"],
-    [
-        "Hyena-1m",
-        "LongSafari/hyenadna-large-1m-seqlen-hf",
-    ],  # 750k and 1m sequences i.e, .75 and 1 don't run; needs more ram.
+    ["Hyena-1m", "LongSafari/hyenadna-large-1m-seqlen-hf"],
+    # 750k and 1m sequences i.e, .75 and 1 don't run; needs more ram.
 ]
 
 types = ["Coding", "Non-coding", "Mixed"]
@@ -100,11 +96,9 @@ def main(seqType, seqClass):
         modelFolder = model[0]
         print("Now starting with:", modelFolder)
         for fraction in fractions:
-            if (model == "Hyena-1m" or model == "GenaLM") and fraction in [
-                "75",
-                "100",
-            ]:  # Since these give errors.
-                continue
+            if (model == "Hyena-1m" or model == "GenaLM") and fraction in ["75", "100"]:
+                continue  # Since these give errors.
+
             mainPath = f"{seqType}/{modelFolder}/{fraction}"
             seqDirectory = (
                 f"./Sequences/{seqClass} Sequences/{mainPath}"
@@ -118,17 +112,21 @@ def main(seqType, seqClass):
                 name = str(filename).split("/")[-1]
                 print("Now doing,", filename)
                 sequences = []
+
                 with open(filename, "r+") as f:
-                    sequences = eval(
-                        f.read()
-                    )  # Since all the 100 mutations of a specific x value are stored in the form of a list in their respective text files.
+                    sequences = eval(f.read())
+                    # Since all the 100 mutations of a specific x value are stored in the form of a list in their respective text files.
+
                 if isinstance(sequences, str):
-                    sequences = [
-                        sequences
-                    ]  # Since the orignal sequences are just single strings stored in the text files.
+                    sequences = [sequences]
+                    # Since the orignal sequences are just single strings stored in the text files.
+
                 embeddings = generateEmbeddings(model[1], sequences)
+
+                # Store in dataframes instead!!
                 with open(f"{newDirectory}/{name}", "w+") as f:
                     f.write(str(embeddings))
+
             end = time.time()
             print(
                 f"Done with {fraction}% of Maxlen sequences for {modelFolder} in {round(end - start, 2)} seconds."
@@ -137,5 +135,5 @@ def main(seqType, seqClass):
 
 if __name__ == "__main__":
     seqType = types[1]
-    seqClass = "Mutated"
+    seqClass = "Original"
     main(seqType, seqClass)
