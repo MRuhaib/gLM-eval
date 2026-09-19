@@ -1,0 +1,667 @@
+%===============================================================================
+% ifacconf.tex 2025-07-31 jpuente  
+% 2022-11-11 jpuente change length of abstract
+% 2025-07-31 jldiez added section on the use of AI
+% Template for IFAC meeting papers
+% Copyright (c) 2025 International Federation of Automatic Control
+%===============================================================================
+\documentclass{ifacconf}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}  
+\usepackage{enumitem}
+\usepackage{booktabs} % for professional tables
+\usepackage{stfloats} % for bottom placement of 2-column figures
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{array}
+\usepackage[symbol]{footmisc}
+
+%\usepackage[backend=bibtex,style=numeric]{biblatex}
+%\addbibresource{references.bib}
+%===============================================================================
+\begin{document}
+\begin{frontmatter}
+
+\title{Undergraduate Research Project Report: \\Intrinsic Evaluation of DNA Embeddings in Genome Language Models} 
+
+\author[1,2]{Ruhaib Muhammad*}
+\author[1,2]{Rajeeva Lokshanan R. M.}
+\author[1,2]{Dr. Nirav P. Bhatt}
+
+% Use IFAC's \thanks or footnote system for affiliations
+\thanks[1]{Department of Biotechnology, Bhupat And Jyoti Mehta School of Biosciences, Chennai--600036, India}
+\thanks[2]{Department of Data Science and AI, Wadhwani School of Data Science and AI, Chennai--600036, India}
+
+
+\maketitle
+
+\begin{abstract}                % Abstract of 50--100 words
+The emergence of Large Language Models (LLMs) has paved the way for exploring the language of the genome. This progress has resulted in the creation of multiple Genome Language Models (gLMs), which aim to understand the genetic code's vocabulary (such as protein-coding genes, activators, enhancers, etc.) and grammar (the arrangement and positioning of the genetic components). These models represent DNA as a dense numerical vector embedding which are utilized for downstream tasks. Genomic foundation models have demonstrated impressive accuracy in downstream tasks such as identifying promoters, detecting splice sites, and predicting transcription factors. Training methods like Masked Language Modeling and Next Token Prediction facilitate the models' learning. However, most models employ these training methods as a means to an end and utilize the numerical embeddings for downstream tasks, leaving a gap in our understanding of the learning process. Few methods are available that characterize the generated embeddings, and these methods only focus on a limited set of existing models. 
+\\
+\\
+In this work, we present a task-independent evaluation of gLM embeddings to understand what contextual and biological information they inherently capture. Through three novel experiments, we assess how well embeddings reflect sequence similarity, encode evolutionary context, and respond to synthetic point mutations. Our findings reveal that embeddings correlate with sequence similarity, cluster by phylogenetic clade, and show differential robustness between coding and non-coding regions. These results offer new insights into the representational capabilities of gLMs and pave the way for principled interpretability and benchmarking of gLMs.
+\end{abstract}
+
+\begin{keyword}
+Genome Language Models, Intrinsic Evaluation, Interpretability, Benchmarks
+\end{keyword}
+
+
+\end{frontmatter}
+%===============================================================================
+
+\section{Introduction}
+Large Language Models (LLMs) have achieved unprecedented success in modeling natural language, as is evident by their widespread usage and current dominance in the AI research landscape. Thanks to the prowess of the transformer architecture (\cite{Vaswani2017Attention}), these models are able to efficiently learn from the vast datasets through unsupervised training, by which they learn to represent text as numeric vector representations or \emph{embeddings}. These embeddings have been shown to efficiently capture the context held within the text, as well as its syntactical structure and grammar. This led the notion of \emph{foundation models} - large models that are pre-trained on extensive datasets in an unsupervised manner, whose embeddings are generalizable representations that can be adapted to a variety of downstream tasks (\cite{schneider2022foundationmodelsbriefhistorical}). The success of LLMs has led to a paradigm shift in representation learning and inspired the extension of these language modeling principles towards other forms of structured data beyond text, including biological sequences.
+
+As a result, a new class of foundation models referred to as genomic or \emph{genome language models} (gLMs) has emerged to investigate whether the success of LLMs can be replicated on DNA sequences as well (\cite{Consens2023,Benegas2024,Liu2024LargeLM,Ruan2025}). Genome language models transform inputted DNA sequences into embeddings that encode biologically meaningful information, which are then used to train machine learning models for various downstream tasks such as identifying promoters, detecting splice sites, and predicting transcription factors. Early efforts demonstrated that masked language modeling on genomic sequences could recover known regulatory motifs and sequence features (\cite{Nguyen2023,Zhou2024,Dalla-Torre2023}), while later work showed that scaling model size, training data, and context length leads to increasingly expressive representations (\cite{Brixi2025}). The development of gLMs in recent years has accelerated rapidly, driven by the advancements in model architectures, increasing availability of genomic data and the growing ambition to construct "virtual cells" capable of simulating cellular functions in silico (\cite{Bunne2024}).
+\footnote[0]{* Email: be22b005@smail.iitm.ac.in}
+
+\newpage
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=8.4cm]{Diagrams/gLM overview.png}
+    \caption{An overview the training process of common genome language models. Source: \cite{Consens2023}.}
+    \label{Fig:train}
+\end{figure}
+
+Despite their conceptual similarity to traditional natural-language based LLMs, genome language models face unique challenges that have driven significant architectural innovation. The first of these challenges is with the DNA input itself, where we have the fundamental issue of tokenization: while natural language can be easily tokenized on the basis of punctuation and stop words and has a clearly defined vocabulary with distinct words, DNA sequences follow an entirely different grammar altogether. The various tokenization methods used are illustrated in Figure \ref{Fig:token}. DNA has a small alphabet (just the four basic nucleotides - A, T, C and G) which makes character-level tokenization inefficient, whereas k-mer–based or traditional byte-pair encoding tokenization methods introduce trade-offs between vocabulary size and generalization (\cite{Sanabria2023,Lindsey2024,10.1093/bioinformatics/btaf456}).
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=8.4cm]{Diagrams/tokenizers.png}
+    \caption{The various tokenization methods used by gLMs. Source: \cite{10.1093/bioinformatics/btaf456}}
+    \label{Fig:token}
+\end{figure}
+
+Another major challenge is sequence length, as genomic regions of interest often span tens of thousands to millions of nucleotides, far exceeding the quadratic context limits of standard transformer-based language models (\cite{Benegas2024}). Traditional LLMs have an upper limit on the size of the input sequence based on their context window. These constraints have motivated the development of alternative architectures and long-range sequence modeling techniques specifically for genome language models. Notable examples include HyenaDNA, which introduced the Hyena operator to model long genomic contexts at single-nucleotide resolution with sub-quadratic scaling costs (\cite{Nguyen2023}); Caduceus, which incorporated equivariant and bidirectional inductive biases for long-range DNA modeling (\cite{Schiff2024}); and Evo 2, which demonstrated genome-scale modeling and design across all domains of life and is currently the largest foundational model for biology (\cite{Brixi2025}). In parallel, traditional transformer-based approaches have also been adapted for gLMs through models such as DNABERT-S (\cite{Zhou2024}), the Nucleotide Transformer (\cite{Dalla-Torre2023}) and GROVER (\cite{Sanabria2024}), all of which are based on the BERT architecture (\cite{devlin-etal-2019-bert}).
+
+Training genome language models typically follows similar self-supervised learning paradigms adapted from traditional natural language processing, using unsupervised learning techniques such as masked-language
+modeling and next-token prediction, as depicted in Figure~\ref{Fig:train} (\cite{Consens2023,Vishniakov2024}). These methods allow models to learn from unlabeled genomic data at scale. The training corpora can consist of either sequential genome data such as entire genomes or smaller genomic regions, or non-sequential genome data such as single-cell transcriptomes; the human genomes frequently serving as a central component due to its well-characterized nature. The scale of these datasets enables models to learn both local sequence motifs and long-range dependencies associated with funtional elements (\cite{Consens2025,Ruan2025}).
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=8.4cm]{Diagrams/genome LLM workflow 1.png}
+    \caption{The major downstream applications of gLMs. Source: \cite{Liu2024LargeLM}}
+    \label{Fig:apps}
+\end{figure}
+
+Coming to the practical applications of these gLMs, their learned embeddings have been widely applied to downstream biological tasks. These include promoter and enhancer detection, transcription factor binding prediction, splice site identification, variant effect prediction, gene expression modeling, and more, as shown in Figure~\ref{Fig:apps} (\cite{Liu2024LargeLM}). In many cases, pretrained embeddings substantially improve performance even with limited task-specific supervision, reinforcing the view of gLMs as foundational models for genomics. These gLMs can be further fine-tuned on datasets for specific downstream tasks, in a manner akin to traditional LLMs (\cite{Vishniakov2024}).
+
+\begin{table*}[t!]
+\caption{Summary of the Genome Language Models considered for this study.}
+\label{models}
+\vskip 0.05in
+\begin{center}
+\begin{small}
+\begin{sc}
+\begin{tabular}{m{4cm}m{2cm}cm{2cm}cm{2cm}c}
+\toprule
+Model & Architecture & Size & Tokenization & Context Length &  {Trained on}  \\
+\midrule
+HyenaDNA    & Hyena & 0.4M - 6.5M & Character-level & 1k - 1M & Human  \\
+DNABERT-2 & BERT & 117M & Byte Pair Encoding & 512 & Human, Multispecies \\
+DNABERT-S    & BERT & 117M & Byte Pair Encoding & 512 & Human, Multispecies \\
+Nucleotide Transformer   & BERT & 500M - 2.5B & k-mer tokens & 1k & Human, Multispecies   \\
+GENA-LM  & BigBird & 336M & Byte Pair Encoding & 36k & Human, Multispecies \\
+GPN   & CNN-Transformer Hybrid &  65M & Character-level & 512 & Human   \\
+GROVER  & BERT & 0.4M - 6.5M & Byte-Pair Encoding & 510 & Human   \\
+% Vehicle   & 44.9$\pm$ 0.6& 61.5$\pm$ 0.4& $\surd$ \\
+\bottomrule
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\vskip 0.1in
+\end{table*}
+
+\newpage
+\subsection{Problem Statement and Motivation}
+
+Despite the tremendous success of LLMs, they remain effectively black boxes as we have very little insight into their internal learning and reasoning mechanisms. They are prone to disastrous hallucinations for which we have almost no understanding, and we also lack methods to safely control their outputs and decisions. As such, there is a large research effort dedicated to LLM interpretability, which examines how traditional LLMs comprehend natural language by analyzing their inner workings and understanding how they
+represent information. This includes the development of probing tasks, representational similarity analyses, robustness tests, and standardized benchmarks. The evaluations can be often categorised into two types: extrinsic evaluation, which assesses the quality of representations via downstream task performance, and intrinsic evaluation, which analyzes embeddings directly to characterize what information they encode independent of task-specific objectives (\cite{Marin2024}). Intrinsic evaluations have proven essential for understanding representational geometry, robustness, and inductive biases in language and vision models.
+
+Although gLMs are relatively still in their infancy, there have been a few attempts to evaluate and becnhmark them. After a literature review, we realised that most gLM evaluation efforts so far have largely focused on extrinsic benchmarks i.e., based on how well the embeddings perform in downstream tasks. Several studies have compared gLMs across regulatory genomics tasks, protein-related tasks, variant effect prediction tasks, cross-species functional prediction, and so on (\cite{Tang2024,Sasse2023,Habib2024,Kan-Tor2024}). Benchmarks such as BEND and DGEB have played a crucial role in standardizing downstream evaluation and highlighting performance trade-offs across models (\cite{Marin2024,West-Roberts2024}). There have also been studies on how the tokenization method chosen influences the final embeddings formed by the model. 
+
+In addition to these extrinsic evaluations, a few studies have also analyzed the internal attention mechanisms of gLMs so as to decipher their reasoning processes (\cite{Consens2025,rajwade2024understanding}). However, these attention scores themselves are oftentimes not directly interpretable and are usually focused towards one specific context or objective, rather being a generalizable study (\cite{Consens2023}). Hence, these studies predominantly assess what gLMs can do, rather than what their embeddings inherently represent.
+
+As a result, the interpretability and intrinsic analysis of genome language models remain relatively underexplored. Most existing analyses are tied to specific tasks, datasets, or biological labels, making it difficult to disentangle representational properties from downstream supervision (\cite{Zheng2024,Boshar2024}). Moreover, \cite{Vishniakov2024} recently suggested that pretraining alone does not guarantee downstream performance and demonstrated that embeddings from randomly initialized gLMs performed better on downstream tasks than those obtained from pretrained gLMs. They also demonstrated that these embeddings perform poorly when it comes to detecting single-nucleotide mutations, an ability which is essential for variant detection tasks. This further underscores the need for deeper representational analysis so as to assess whether the embeddings capture appropriate contexts through the computationally expensive pre-training process. Understanding the intrinsic structure, robustness, and contextual sensitivity of gLM embeddings is therefore essential for principled model comparison, interpretability, as well as for reliable deployment in biological discovery. This study is further motivated by the fact that gLMs are poised to play a central role in the booming field of AI for biology.
+
+Our work aims to address this gap by performing a systematic intrinsic evaluation of genome language model embeddings, independent of any downstream tasks - by characterizing them in isolation, we can quantify their representational power. This will thoroughly assess the quality of the representations generated by the pre-trained gLMs based on the knowledge they contain, and help in not only gaining a better understanding of these models’ learning process but also serve as a benchmark for gLMs. This work carries out an intrinsic evaluation of gLMs for biological information learned by gLMs. By analyzing properties such as sequence similarity, contextual encoding, and robustness to mutation, we aim to characterize the biological information that is inherently captured by pretrained gLMs. Such intrinsic benchmarks complement existing extrinsic evaluations, provide deeper insight into model behavior, and could contribute toward a more principled understanding of genome language models as foundational representations for computational biology.
+
+\vskip -1cm
+\subsection{Objectives}
+
+\begin{figure*}[t!]
+\centering
+\begin{subfigure}{1\textwidth}
+    \centering
+    \includegraphics[width=1\textwidth]{Diagrams/UGRC expt 1 flow.png}
+    \caption{The workflow used to test our first hypothesis on Sequence Similarity.}
+\end{subfigure}
+\hfill
+\begin{subfigure}{1\textwidth}
+    \centering
+    \includegraphics[width=1\textwidth]{Diagrams/UGRC expt 2 flow.png}
+    \caption{The workflow used to test our second hypothesis on Embedding Contextuality.}
+\end{subfigure}
+\hfill
+\begin{subfigure}{1\textwidth}
+    \centering
+    \includegraphics[width=1\textwidth]{Diagrams/UGRC expt 3 flow.png}
+    \caption{The workflow used to test our third hypothesis on Embedding Robustness.}
+\end{subfigure}
+\caption{Flow charts of the workflows used for the validation of our 3 hypotheses.}\label{Fig:flow}
+\end{figure*}
+
+The main objective of our project is to do an intrinsic evaluation of gLM embeddings and understand what context they capture, and to investigate how model size and architecture plays a role. For this, we devised a series of tasks (as depicted in Figure \ref{Fig:flow}) to evaluate how well an embedding represents its corresponding DNA sequence, based on the following 3 hypotheses: 
+
+\begin{enumerate}[noitemsep,nolistsep]
+    \vspace{0.2cm}
+    \item \textbf{Sequence Similarity}: Similar sequences should yield similar embeddings. 
+    \item \textbf{Embedding Contextuality}: Similar sequences in different contexts should have different embeddings.
+    \item \textbf{Embedding Robustness}: The effect of point mutations in sequences must be appropriately reflected in their embeddings.
+\end{enumerate}
+
+\section{Methodology}
+
+\subsection{Genome Language Models}
+To comprehensively evaluate the representational capabilities of gLMs, models of varying sizes, architectures (encoder and decoder), tokenization strategies, and pretraining data were selected as shown in Table~\ref{models}.  These models were used without any fine-tuning or modification, as the goal was to analyze the information and context already captured in their pre-trained embeddings. The diversity in model characteristics allowed us to systematically assess how these factors influence embedding quality. This allowed for a robust comparative analysis across the full spectrum of gLM design, purely based on their pretrained representations. The embedding vector, an output of the final layer of a particular gLM, was generated by providing each DNA sequence as an input.
+
+\subsection{Datasets}
+
+Genomic dataset from 1011 strains of \textit{Saccharomyces cerevisiae} (baker’s yeast), a well-characterized eukaryotic organism, was used (\cite{Peter2018}). Since the yeast genome strikes a unique balance: it is simple and compact like bacterial genomes, yet retains the structural and regulatory complexity typical of eukaryotes, this dataset was selected for this study. This dataset also acts as a smaller snapshot of a greater biological diversity. Hence, we can expect that results obtained on this dataset can be used to generalize to other biological systems. From each strain, we extracted specific individual gene sequences to serve as inputs. These genes are largely conserved across strains, with only minor nucleotide variations, and they provided an ideal testbed for analyzing how gLM embeddings reflect subtle sequence differences. This dataset was used to investigate sequence similarity and embedding contextuality criteria. For the third criterion, embeddings pertaining to coding and non-coding sequences have to be compared. For the same, we made use of conserved non-coding sequences belonging to \textit{Sarcopterygii matsunami}, sourced from \cite{Inoue2021}. Further verification was carried out on human coding and intergenomic sequences from \cite{Gresova2022} and the human reference genome.
+% \subsection{Embedding Generation for Yeast DNA Sequences}
+% The first step in our work is to obtain embeddings for each Yeast strain using gLMs in Table~\ref{models}.   Seven different genes of varying lengths (ranging from 600 to 4000 bases) were considered for sequence similarity and embedding contexuality criteria.  The embedding vectors were obtained 
+
+% Embeddings are a vector representations outputted by the final layer of language models. 
+
+
+%For our experiments, we obtained 
+\vskip -1cm
+\subsection{Sequence Similarity}
+
+% In our first experiment, we used the same gene sequence across all the 1011 strains as inputs to each of the selected gLMs. We used a total of 7 different gene sequences of varying lengths (ranging from 600 to 4000 bases), so as to investigate whether sequence length has any effect. These sequences are mostly conserved and hence differ only in the positioning of a couple of nucleotides. Their similarity is quantified by the Needleman-Wunsch alignment score, which is proportional to the degree of their similarity. The output embeddings generated by the gLMs for these sequences are of varying dimensions, specific to each model. We quantify their dissimilarity by calculating the euclidean distances between them, since we can expect similar embeddings to have lesser euclidean distances between them as they are closer together in vector space. Thus, if our hypothesis holds true, then the Needleman-Wunsch alignment scores between these DNA sequences should be negatively correlated to the euclidean distances between their respective embeddings.
+
+Sequences of the same gene from all 1011 strains were used to study the sequence similarity criteria. Initially, seven different genes of varying lengths (ranging from 600 to 4000 bases) were considered to test out our hypothesis. These sequences are mostly conserved, and hence, they differ only at a few nucleotides. Their similarity is quantified by the Needleman-Wunsch algorithm. The lower Needleman-Wunsch score implies a more dissimilar sequence. The embeddings for these gene sequences were generated using the gLMs, and the similarity between embeddings was calculated using the Euclidean distance, as embeddings with similar contexts tend to be located closer together in vector space. Higher Euclidean distance implies a dissimilar sequence. Thus, if our hypothesis holds, then the Needleman-Wunsch alignment scores between these DNA sequences should be negatively correlated with the Euclidean distances between their respective embeddings. Let $d_{ij}$ denote the embedding distance between sequences $i,j$, and $s_{ij}$ their Needleman–Wunsch alignment score, with $\rho$ as the correlation coefficient. Therefore, we expect that:
+
+\vskip -0.1in
+\begin{align}
+  d_{ij} &\;\propto\; \frac{1}{s_{ij}} & or && \rho(d_{ij},s_{ij}) < 0
+\end{align}
+
+If our hypothesis holds, then accordingly a stronger correlation should imply that the model is better at capturing single-nucleotide differences. Using the workflow depicted in Figure \ref{Fig:flow} (a), we calculated the average correlations over all 1011 strains' gene sequences, for each gLM. To further verify our findings, we repeated this experiment on another 100 genes from the same dataset whose lengths ranged uniformly between 50 and 5000 nucleotides, in an attempt to ascertain the effect of sequence length on the strength of correlations.
+
+\subsection{Embedding Contextuality}
+
+This criterion evaluates the ability of the gLMs to capture certain sequence-specific characteristics/contexts. Context, for example, could be the \emph{clade} of the species from which a sequence is obtained. An ideal gLM should be able to generate similar embeddings for sequences from the same clade. 
+
+To test this, gene sequences of \textit{S. cerevisiae} were obtained from  \citet{Peter2018}. Particularly, with this set of \textit{Saccharomyces cerevisiae} strains, we wanted to verify whether the models’ embeddings could pick up characteristics that are representative of the entire strain. One such characteristic is the clade which a strain belongs to - the 1011 strains can be classified into roughly 30 clades, based on their evolutionary origin as seen in Figure \ref{Fig:clades}. We reasoned that if this feature was being recognized by the gLMs, then the embeddings generated from sequences of strains belonging to the same clade should be located closer together in vector space, as compared to sequences from other clades’ strains. 
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=8.4cm]{Images/exp2/clades.png}
+    \caption{The 30 clades of the 1011 strains of Saccharomyces Cerevisiae.
+Source: Peter et al., 2018}
+    \label{Fig:clades}
+\end{figure}
+
+Ideally, the strain’s entire genome as the input itself in order to distinguish between the clades they belong to. However, the models’ context windows which range from 500 to 1 million bases are much smaller than the genome sequence lengths, which have an average length of around 12 million bases. Hence, we instead chose one gene sequence and generated the embeddings for it, across all the strains, to investigate whether the gLMs cold infer the parent clade based on a single gene alone, as depicted in Figure \ref{Fig:flow} (b). To further validate the results, we employed clustering algorithms such as K-Means and Agglomerative Clustering to see how well these reduced embeddings were being clustered. The quality of clustering was also measured by varying different clustering algorithm parameters, such as the number of members within a cluster, or the expected number of clusters, to see whether they corresponded with clade-related statistics such as the median number of strains across the clades, and the total number of clades itself.
+
+
+\begin{figure*}[h!]
+\centering
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp1/YAL007C_biopython.png}
+    \caption{Correlations for the YAL007C gene (648 bases).}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp1/YAL026C_biopython.png}
+    \caption{Correlations for the YAL026C gene (4068 bases).}
+\end{subfigure}
+\caption{Magnitudes of the overall negative correlations between the gene sequences' pairwise Needleman-Wunsch alignment scores and the Euclidean distances between their corresponding embeddings, for each model.}
+\label{fig:7 corr}
+%\vskip -0.5in
+\end{figure*}
+
+\begin{figure*}[h!]
+%\vskip 0.05in
+\centering
+\includegraphics[width=0.9\textwidth]{Images/exp1/100 corr.png}
+\caption{Regression lines for the averaged correlation magnitude per gene of all models across the 100 genes.}
+\label{fig:100 corr}
+
+\end{figure*}
+
+\subsection{Embedding Robustness}%
+% Here, our major goal was to analyse how sensitive the models’ embeddings were to mutations made in the sequences. 
+Mutations are nucleotide substitutions in DNA sequences that can often have far-reaching consequences, capable of drastically altering an organism’s phenotype. Accordingly, understanding how gLM embeddings respond to such mutations is essential for assessing their reliability in applications involving genomic variation, such as variant effect prediction or disease mutation analysis. Further, it is important to analyse whether the embeddings pertaining to coding and non-coding sequences could be differentiated by gLMs. Hence, robust embeddings should reflect meaningful biological differences while remaining invariant to neutral or synonymous changes, especially in coding sequences where redundancy in the genetic code, i.e., codon degeneracy, often mitigates the impact of mutations. 
+
+Here, coding sequences from {\em S. cerevisiae} and non-coding sequences from \textit{S. matsunami} (which has a well-characterized non-coding region) were chosen for each of the models based on their context window, i.e., for each model, the sequences’ lengths were equal to the maximum permissible input length. Synthetic mutations were generated in these sequences by randomly replacing nucleotides in increasing percentages, ranging from 5\% to 50\%, in steps of 5\%. For each mutation percentage,  100 independently mutated versions of the original sequence were generated, ensuring randomness in mutation sites. After generating embeddings for each of these sequences, the Euclidean distances between each mutated sequence’s embedding and its original (baseline) embedding were computed to measure their difference in context, as seen in Figure \ref{Fig:flow} (c). With this, we sought to answer
+the following questions in order to investigate the robustness of embeddings.
+
+\begin{itemize}[noitemsep,nolistsep]
+    \item How sensitive are gLM embeddings to random point mutations in DNA sequences?
+    \item Whether the type of sequence (coding vs. noncoding) affects embedding shifts?
+    \item How do embedding distances change with an increase in the percentage of mutated bases?
+\end{itemize}
+
+%\section{Experimental Setup}
+
+%\subsection{Genome Language Models}
+
+\section{Results}
+
+\subsection{Sequence Similarity}
+The models exhibit strong negative correlations as shown in Figure ~\ref{fig:7 corr}, giving credence to our hypothesis that similar sequences have similar embeddings. HyenaDNA-large-1M performs better on longer gene sequences such as YAL026C (4068 bases), while the Nucleotide Transformer family of models performs better with shorter gene sequences such as YAL007C (648 bases). Note that HyenaDNA-large-1M and Nucleotide Transformer are trained on sequences of larger and shorter lengths, respectively. This suggests that the length of training data could play a role in embedding characteristics of these models. DNABERT-S, GROVER, and Gena-LM models perform equally well irrespective of the sequence size. 
+
+\begin{figure*}
+%\vskip 0.05in
+\centering
+\includegraphics[width=0.9\textwidth]{Images/exp2/umap3x3.png}
+\caption{Scatter plots of the models' UMAP-reduced embeddings for the YAL001C gene sequence from each of the 1011 strains, labeled according to the clade they belong to.}
+\label{fig:clade-clustering}
+\end{figure*}
+
+\begin{figure*}[h!]
+\centering
+\begin{subfigure}{0.42\textwidth}
+    \includegraphics[width=\textwidth]{Images/exp2/agglomerative clustering.png}
+    \caption{Agglomerative clustering of UMAP-reduced embeddings.}
+    \label{fig:agg-cluster}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+    \includegraphics[width=\textwidth]{Images/exp2/agglomerative_ARS.png}
+    \caption{Adjusted rand scores v/s no. of clusters for (a).}
+    \label{fig:sillhouette-scores}
+\end{subfigure}
+\caption{Variation in clustering quality with parameters.}
+\label{fig:res-2}
+%\vskip -0.1in
+\end{figure*}
+
+Based on this observation, the experiment was repeated for 100 genes whose lengths ranged uniformly from 50 to 5000 nucleotides. We once again obtained strong negative correlations, as seen in Figure \ref{fig:100 corr}. However, we also noticed that the strength of correlation tended to decrease as the size of the nucleotide sequence increased for some models such as Nucleotide Transformer, Gena-LM, GROVER and GPN, while it remained relatively stable for the HyenaDNA models, suggesting that they were better at handling larger sequences, and corroborating our previous findings.
+
+\subsection{Embedding Contextuality}
+
+Several distinct clusters were formed for the embeddings from each clade as seen in Figure~\ref{fig:clade-clustering}, suggesting that these gLMs were able to pick up characteristic features pertaining to the entire strain from their genes’ sequences alone. These results were consistent throughout the models. It can be noted that the shape of these clusters seemed to be conserved as well, possibly indicating that they pick up the same clade-distinguishing features from the sequences, irrespective of their model design and architecture.
+
+ Both k-means and agglomerative clustering were able to form 25-30 clusters, which is close to the correct total of 30 clades. By observing the variation in the quality of clusterings (measured by the silhouette score and the adjusted Rand score) with clustering algorithm parameters,  the highest scores were obtained when the 'number of clusters' parameter was close to 30 in the case of the agglomerative clustering, and when the parameter for the 'number of neighbors' within a cluster was close to the median number of strains in each clade, i.e., 17, for k-means clustering (Figure \ref{fig:res-2}). Thus, the embeddings belonging to one clade tended to be closer to each other, complying with our hypothesis for the same. 
+
+\begin{figure*}[h!]
+\centering
+\centerline{\includegraphics[width=0.92\textwidth]{Images/exp3/exp3allModelsFinal.png}}
+\caption{Results from our third experiment. Here, each boxplot corresponds to the distribution of Euclidean distances between the embeddings of the 100 randomly mutated sequences at that value of mutation percentage and the original sequence’s embedding.}
+\label{fig:expt3-res1}
+%\vskip -0.15in
+\end{figure*}
+
+\subsection{Embedding Robustness}
+
+\begin{figure*}[t!]
+\centering
+\centerline{\includegraphics[width=0.9\textwidth]{Images/exp3/1000seqs2.png}}
+\caption{Distributions of distances for coding/non-coding sequences, for 1000 input sequences at each mutation percentage.}
+\label{fig:exp-dist2}
+\end{figure*}
+
+\begin{figure*}[h!]
+%\vspace{-5in}
+\centering
+\begin{subfigure}{0.46\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/80-20black.png}
+    \caption{One-shot classification, with a train-test split of 80-20.}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.46\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/1-99black.png}
+    \caption{Pseudo Zero-shot classification, with a train-test split of 1-99.}
+\end{subfigure}
+\caption{Classification accuracies of a random forest classifier trained on human coding and non-coding sequence embeddings.}
+\label{Fig:classification}
+\end{figure*}
+
+\begin{figure*}[h!]
+%\vspace{-5in}
+\centering
+\begin{subfigure}{0.46\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/3.1/GB results.png}
+    \caption{One-shot classification, with a train-test split of 75-25.}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.46\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/3.1/GB 99-1.png}
+    \caption{Pseudo Zero-shot classification, with a train-test split of 1-99.}
+\end{subfigure}
+\caption{Classification accuracies of a random forest classifier trained on coding and intergenomic sequence embeddings from the Genomics Benchmarks dataset.}
+\label{Fig:GB}
+\end{figure*}
+
+The magnitude of distances increases as the number of mutations in the sequence increases, as depicted in Figure~\ref{fig:expt3-res1}, agreeing with our hypothesis. One of the most striking patterns observed in our mutation robustness experiments was the consistently larger Euclidean distances between embeddings of mutated and original sequences in non-coding DNA compared to coding DNA across most genomic language models. This suggests that point mutations in non-coding sequences result in more significant shifts in embedding space, implying a higher contextual sensitivity to such changes. 
+
+While this was true for most models, the HyenaDNA models were an exception, with coding sequences having marginally higher Euclidean distances in most of them. GPN also showed higher distances for coding sequences. Another peculiar case was that of the Nucleotide Transformer models; the 500M parameter model and 2.5B parameter model trained on Human genome data showed significantly higher distances for non-coding sequences whereas the 2.5B parameter model trained on multi-species genome data had very little difference between the coding and non-coding distances, despite all of them receiving the same input sequences due to their shared context length. 
+
+A biologically plausible explanation for this phenomenon could lie in the concept of \emph{codon degeneracy}. In protein-coding DNA, the genetic code is redundant as multiple codons can encode the same amino acid. Consequently, embeddings of coding sequences may remain relatively stable under such mutations. In contrast, non-coding DNA lacks this redundancy. Even a single-nucleotide substitution in a non-coding region can disrupt regulatory motifs or structural elements that are crucial for gene expression and genome architecture. Hence, point mutations in non-coding sequences are more likely to cause shifts in functional meaning, which in turn is reflected in larger embedding distances.
+
+In order to further confirm these findings on a larger scale, we repeated the experiment with 1000 different sequences for each mutation percentage, each of which was randomly mutated 100 times so as to ensure consistency in the results. The results of this experiment are shown in Figure~\ref{fig:exp-dist2}, where we have compared the distribution of all distances pertaining to each type of sequence. Using the Kolmogorov-Smirnov test on each pair of distributions yielded a $p$-value of zero, confirming that they were significantly different.
+
+We also analyzed whether there was any relation between the type of mutations (transition/transversion) that were made and the embedding distance, as well as the effect of different nucleotides' compositions in the sequences, but found no meaningful correlations.
+
+\subsection{Coding/Non-coding Classification}
+To see if these embeddings are indeed different for coding and non-coding sequences, we generated embeddings for 20000 coding and 20000 non-coding sequences taken from the human reference genome, in the hopes that this would be a fairer evaluation as as all the selected gLMs contain human sequences in their pretraining data. Using these embeddings, we trained a random forest classifier on two different train-test splits, of 80-20 (one-shot)  and 1-99 (pseudo zero-shot) (Figure \ref{Fig:classification}). 
+
+Across both settings, the classifier achieved significantly higher-than-chance accuracy for nearly all models as depicted in Figure 6, with some (e.g., HyenaDNA variants) reaching accuracies above 90\% in the one-shot setting and maintaining robust performance even in the pseudo zero-shot regime. These results indicate that the embeddings produced by gLMs inherently encode features that distinguish coding from non-coding sequences, without requiring any fine-tuning. This finding is consistent with the mutation robustness analysis, where coding and non-coding sequences showed systematically different embedding behaviors. Together, these experiments suggest that gLMs are not only capable of capturing localized sequence patterns but may also be encoding functional genomic context that differentiates regulatory and protein-coding regions. 
+
+We then repeated this classification experiment on the coding-intergenomic sequences dataset from Genomic Benchmarks, consisting of a total of 50000 DNA sequences for each type, with each sequence having a fixed length of 200 nucleotides. As the sequence length was fixed and the sequences were of Human origin, we believed this would be a fair assessment of these models' ability to distinguish between the two sequence types. Again, the random forest classifier yielded strong accuracies in both training paradigms (as seen in Figure \ref{Fig:GB}), which gave credence to the hypothesis that the embeddings themselves contain discriminatory information pertaining to coding and non-coding sequences.
+
+To see if there was any interpretable difference in the embeddings of these sequences, we made UMAP vizualisations for each gLMs' embeddings. The separation between the two types of sequences' embeddings was more pronounced in Gena-LM and GPN, whereas it was more ambiguous for Nucleotide Transformer and GROVER, as seen in Figures \ref{Fig:GB umap 1} and \ref{Fig:GB umap 2} respectively.
+\begin{figure}[h!]
+%\vspace{-5in}
+\centering
+\begin{subfigure}{0.24\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/3.1/gena lm embeddings.png}
+    \caption{Gena-LM}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/3.1/GPN embeddings.png}
+    \caption{GPN.}
+\end{subfigure}
+\caption{UMAP visualization of (a) Gena-LM and (b) GPN model embeddings, with 0 denoting coding sequences and 1 denoting non-coding sequences.}
+\label{Fig:GB umap 1}
+\end{figure}
+
+\begin{figure}[h!]
+%\vspace{-5in}
+\centering
+\begin{subfigure}{0.24\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/3.1/NT embeddings.png}
+    \caption{Nucleotide Transformer (2.5B)}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.24\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{Images/exp3/3.1/GROVER.png}
+    \caption{GROVER}
+\end{subfigure}
+\caption{UMAP visualization of (a) Nucleotide Transformer and (b) GROVER model embeddings, with 0 denoting coding sequences and 1 denoting non-coding sequences.}
+\label{Fig:GB umap 2}
+\end{figure}
+
+\section{Future Directions}
+
+Currently, we are focusing on understanding the basis of these embeddings' success in coding/non-coding classification. We want to understand what specific part of the input DNA sequence allows the model to encode information regarding its type, and helps it distinguish between a coding and non-coding sequence. For the same, we are carrying out an attribution analysis using the Captum library that identifies individual tokens that are the most important when the model makes a decision - in this case, classifying between coding and non-coding. We hope to find meaningful subsequences that could support the notion that these models can learn important features from DNA sequences.
+
+We also plan to expand on our previous experiments on sequence similarity and embedding contextuality. For the latter, we will also carry out an attribution analysis in order to identify the nucleotide differences between the strains' sequences that allows them to be classified under one clade. An interesting direction is investigating whether these models can go beyond simple clade identification and capture entire evolutionary relationships as well - one idea to test this is to see if the phylogenic distance between two species is correlated with the euclidean distance between their respective genomes' embeddings. 
+
+\newpage
+
+Along the lines of the mutation sensitivity experiment, another possible direction of research is to see how well these models capture the relationships between DNA sequences and the protein sequences they yield after translation as well, as how they respond to individual codons in the sequence. For this, we plan to investigate how these models respond to codon-shuffled variants of the same sequences with respect to the original sequence.
+
+In order to have a comprehensive study, we intend to repeat all of our experiments with sequences taken from species whose genomes are included and excluded in these models' training data, so as to assess their generalization capabilities and their dependence on training data. Further intrinsic evaluations can be conducted to analyse the advantages and disadvantages of current pretraining methodologies for gLMs. One possible way for this is to repeat our experiments using embeddings from randomly initialized i.e., untrained models and see whether the same results still hold.
+
+At the end of the project, we also plan on releasing the framework of tools used to carry out our experiments as a general benchmarking suite for gLM users that will allow them to assess the quality of their gLM's embeddings, hence potentially becoming the first intrinsic evaluation benchmark for gLMs. Such a tool can help gLM users to thoroughly evaluate the information and knowledge held within their gLM's embeddings, based on which they can be effectively used for downstream applications.
+
+Finally, we believe that such intrinsic studies can be helpful towards the AI safety field as well. Recent advances in \emph{representation engineering} allow for the steering of LLMs using specific concept vectors, which allow these models' outputs to be controlled. While no such study has been done on the alignment of gLMs as of yet, we believe that further intrinsic studies of gLM embeddings can give more insights on the concepts they hold, paving the way for the principled alignment of gLMs in the future.
+
+\section{Conclusion}
+
+In this preliminary study, a suite of experiments was proposed to intrinsically evaluate the embeddings of the pretrained gLMs. This study sheds light on how the gLMs represent the DNA sequences. These gLMs models considered in this study accurately group similar sequences and dissimilar sequences, even when the difference is only a change in a small number of nucleotides. Further analysing the effect of the mutations on the representational capabilities of the gLMs, it is observed that many of these models can distinguish coding and non-coding sequences without explicitly being trained on these data separately. This points to the fact that these models are able to understand the biological differences between the different types of sequences. Further, this analysis will aid in understanding how exactly these models learn the differences between these sequences, independent of downstream tasks. In conclusion, our work serves as a stepping stone towards better understanding genomic language models.
+
+\begin{ack}
+I express my sincere gratitude to my advisor Dr. Nirav Bhatt and my mentor Rajeeva Lokshanan for entrusting me with this wonderful learning experience, for their continuous guidance, and for helping me understand how research is to be conducted. I am very grateful for their constant support and motivation throughout the course of this project, which has reaffirmed my aspirations to pursue research in the future.
+\end{ack}
+
+%\bibliography{references}
+%\printbibliography\begin{thebibliography}{99}
+\begin{thebibliography}{99}
+
+\bibitem[Vaswani et al., 2017]{Vaswani2017Attention}
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A., Kaiser, L., and Polosukhin, I..
+\textit{Attention is all you need}.
+Advances in Neural Information Processing Systems 30 (NIPS 2017), 6000--6010. 2017.
+
+\bibitem[Schneider et al., 2022]{schneider2022foundationmodelsbriefhistorical}
+Schneider, J..
+\textit{Foundation models in brief: A historical, socio-technical focus}.
+arXiv:2212.08967. 2022.
+\url{https://arxiv.org/abs/2212.08967}
+
+\bibitem[Benegas et al., 2023]{Benegas2023}
+Benegas, G., Batra, S. S., Song, Y. S., and Roeder, I. E. b. K..
+\textit{BIOPHYSICS AND COMPUTATIONAL BIOLOGY OPEN ACCESS DNA language models are powerful predictors of genome-wide variant effects}.
+ 120. 2023.
+\url{https://doi.org/10.1073/pnas}
+
+\bibitem[Inoue et al., 2021]{Inoue2021}
+Inoue, J. and Saitou, N..
+\textit{dbCNS: A New Database for Conserved Noncoding Sequences}.
+Molecular Biology and Evolution 38(4), 1665-1676. 2021.
+\url{https://doi.org/10.1093/molbev/msaa296}
+
+\bibitem[Fishman et al., 2025]{Fishman2025}
+Fishman, V., Kuratov, Y., Shmelev, A., Petrov, M., Penzar, D., Shepelin, D., Chekanov, N., Kardymon, O., and Burtsev, M..
+\textit{GENA-LM: a family of open-source foundational DNA language models for long sequences}.
+Nucleic Acids Research 53(2). 2025.
+\url{https://doi.org/10.1093/nar/gkae1310}
+
+\bibitem[Gresova et al., 2022]{Gresova2022}
+Gresova, K., Martinek, V., Cechak, D., Simecek, P., and Alexiou, P..
+\textit{Genomic Benchmarks: A Collection of Datasets for Genomic Sequence Classification}.
+bioRxiv. 2022.
+\url{https://doi.org/10.1101/2022.06.08.495248}
+
+\bibitem[Devlin et al., 2019]{devlin-etal-2019-bert}
+Devlin, J., Chang, M., Lee, K., and Toutanova, K..
+\textit{BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding}.
+Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers). 2019.
+\url{https://arxiv.org/abs/1810.04805}
+
+\bibitem[Shulgina et al., 2024]{Shulgina2024}
+Shulgina, Y., Trinidad, M. I., Langeberg, C. J., Nisonoff, H., Chithrananda, S., Skopintsev, P., Nissley, A. J., Patel, J., Boger, R. S., Shi, H., Yoon, P. H., Doherty, E. E., Pande, T., Iyer, A. M., Doudna, J. A., and Cate, J. H. D..
+\textit{RNA language models predict mutations that improve RNA function}.
+bioRxiv. 2024.
+\url{https://doi.org/10.1101/2024.04.05.588317}
+
+\bibitem[Tang et al., 2024]{Tang2024}
+Tang, Z., Somia, N., Yu, Y., and Koo, P. K..
+\textit{Evaluating the representational power of pre-trained DNA language models for regulatory genomics}.
+bioRxiv. 2024.
+\url{https://doi.org/10.1101/2024.02.29.582810}
+
+\bibitem[Sanabria et al., 2024]{Sanabria2024}
+Sanabria, M., Hirsch, J., Joubert, P. M., and Poetsch, A. R..
+\textit{DNA language model GROVER learns sequence context in the human genome}.
+Nature Machine Intelligence 6(8), 911-923. 2024.
+\url{https://doi.org/10.1038/s42256-024-00872-0}
+
+\bibitem[Sasse et al., 2023]{Sasse2023}
+Sasse, A., Ng, B., Spiro, A. E., Tasaki, S., Bennett, D. A., Gaiteri, C., Jager, P. L. D., Chikina, M., and Mostafavi, S..
+\textit{Benchmarking of deep neural networks for predicting personal gene expression from DNA sequence highlights shortcomings}.
+bioRxiv. 2023.
+\url{https://doi.org/10.1101/2023.03.16.532969}
+
+\bibitem[Sanabria et al., 2023]{Sanabria2023}
+Sanabria, M., Hirsch, J., and Poetsch, A. R..
+\textit{Distinguishing word identity and sequence context in DNA language models}.
+bioRxiv. 2023.
+\url{https://doi.org/10.1101/2023.07.11.548593}
+
+\bibitem[Silva et al., 2024]{TomazdaSilva2024}
+Silva, P. T. d., Karollus, A., Hingerl, J., Galindez, G., Wagner, N., Hernandez-Alias, X., Incarnato, D., and Gagneur, J..
+\textit{Nucleotide dependency analysis of DNA language models reveals genomic functional elements}.
+bioRxiv. 2024.
+\url{https://doi.org/10.1101/2024.07.27.605418}
+
+\bibitem[Boshar et al., 2024]{Boshar2024}
+Boshar, S., Trop, E., Almeida, B. P. d., Copoiu, L., and Pierrot, T..
+\textit{Are Genomic Language Models All You Need? Exploring Genomic Language Models on Protein Downstream Tasks}.
+bioRxiv. 2024.
+\url{https://doi.org/10.1101/2024.05.20.594989}
+
+\bibitem[Zheng et al., 2024]{Zheng2024}
+Zheng, G., Rymuza, J., Gharavi, E., LeRoy, N. J., Zhang, A., and Sheffield, N. C..
+\textit{Methods for evaluating unsupervised vector r epr esentations of genomic regions}.
+NAR Genomics and Bioinformatics 6(3). 2024.
+\url{https://doi.org/10.1093/nargab/lqae086}
+
+\bibitem[Habib et al., 2024]{Habib2024}
+Habib, A., Sundar, H., and Hall, M..
+\textit{Exploring the Embedding Methods in Genomic Language Models}.
+Technical Report. 2024.
+
+\bibitem[Marin et al., 2024]{Marin2024}
+Marin, F. I., Teufel, F., Horlacher, M., Madsen, D., Pultz, D., Winther, O., and Boomsma, W..
+\textit{BEND: Benchmarking DNA Language Models on biologically meaningful tasks}.
+2024.
+\url{http://arxiv.org/abs/2311.12570}
+
+\bibitem[Brixi et al., 2025]{Brixi2025}
+Brixi, G., Durrant, M. G., Ku, J., Poli, M., Brockman, G., Chang, D., Gonzalez, G. A., King, S. H., Li, D. B., Merchant, A. T., Naghipourfar, M., Nguyen, E., Ricci-Tam, C., Romero, D. W., Sun, G., Taghibakshi, A., Vorontsov, A., Yang, B., Deng, M., Gorton, L., Nguyen, N., Wang, N. K., Adams, E., Baccus, S. A., Dillmann, S., Ermon, S., Guo, D., Ilango, R., Janik, K., Lu, A. X., Mehta, R., Mofrad, M. R., Ng, M. Y., Pannu, J., Ré, C., Schmok, J. C., John, J. S., Sullivan, J., Zhu, K., Zynda, G., Balsam, D., Collison, P., Costa, A. B., Hernandez-Boussard, T., Ho, E., Liu, M., McGrath, T., Powell, K., Burke, D. P., Goodarzi, H., Hsu, P. D., and Hie, B. L..
+\textit{Genome modeling and design across all domains of life with Evo 2}.
+bioRxiv. 2025.
+\url{https://doi.org/10.1101/2025.02.18.638918}
+
+\bibitem[Benegas et al., 2025]{Benegas2025}
+Benegas, G., Albors, C., Aw, A. J., Ye, C., and Song, Y. S..
+\textit{A DNA language model based on multispecies alignment predicts the effects of genome-wide variants}.
+Nature Biotechnology. 2025.
+\url{https://doi.org/10.1038/s41587-024-02511-w}
+
+\bibitem[Vishniakov et al., 2024]{Vishniakov2024}
+Vishniakov, Kirill and Viswanathan, Karthik and Medvedev, Aleksandr and Kanithi, Praveen K and Pimentel, Marco AF and Rajan, Ronnie and Khan, Shadab.
+\textit{Genomic Foundationless Models: Pretraining Does Not Promise Performance}.
+bioRxiv. 2025.
+\url{https://doi.org/10.1101/2024.12.18.628606}
+
+\bibitem[Bunne et al., 2024]{Bunne2024}
+Charlotte Bunne and Yusuf Roohani and Yanay Rosen and Ankit Gupta and Xikun Zhang and Marcel Roed and Theo Alexandrov and Mohammed AlQuraishi and Patricia Brennan and Daniel B. Burkhardt and Andrea Califano and Jonah Cool and Abby F. Dernburg and Kirsty Ewing and Emily B. Fox and Matthias Haury and Amy E. Herr and Eric Horvitz and Patrick D. Hsu and Viren Jain and Gregory R. Johnson and Thomas Kalil and David R. Kelley and Shana O. Kelley and Anna Kreshuk and Tim Mitchison and Stephani Otte and Jay Shendure and Nicholas J. Sofroniew and Fabian Theis and Christina V. Theodoris and Srigokul Upadhyayula and Marc Valer and Bo Wang and Eric Xing and Serena Yeung-Levy and Marinka Zitnik and Theofanis Karaletsos and Aviv Regev and Emma Lundberg and Jure Leskovec and Stephen R. Quake
+\textit{How to build the virtual cell with artificial intelligence: Priorities and opportunities}.
+Cell 187(25), 7045-7063. 2024.
+\url{https://doi.org/10.1016/j.cell.2024.11.015}
+
+\bibitem[Lindsey et al., 2025]{10.1093/bioinformatics/btaf456}
+Lindsey, L., Pershing, N., Habib, A., Dufault-Thompson, K., Stephens, W., Blaschke, A., Jiang, X., and Sundar, H..
+\textit{The impact of tokenizer selection in genomic language models}.
+Bioinformatics 41(9), btaf456. 2025.
+\url{https://doi.org/10.1093/bioinformatics/btaf456}
+
+\bibitem[Liu et al., 2024]{Liu2024LargeLM}
+Liu, J., Yang, M., Yu, Y., Xu, H., Li, K., and Zhou, X..
+\textit{Large language models in bioinformatics: applications and perspectives}.
+ArXiv abs/2401.04155. 2024.
+\url{https://arxiv.org/abs/2401.04155}
+
+\bibitem[West-Roberts et al., 2024]{West-Roberts2024}
+West-Roberts, J., Kravitz, J., Jha, N., Cornman, A., and Hwang, Y..
+\textit{Diverse Genomic Embedding Benchmark for functional evaluation across the tree of life}.
+bioRxiv. 2024.
+\url{https://doi.org/10.1101/2024.07.10.602933}
+
+\bibitem[Zhang et al., 2023]{Zhang2023}
+Zhang, Y. Z., Bai, Z., and Imoto, S..
+\textit{Investigation of the BERT model on nucleotide sequences with non-standard pre-training and evaluation of different k-mer embeddings}.
+Bioinformatics 39(10). 2023.
+\url{https://doi.org/10.1093/bioinformatics/btad617}
+
+\bibitem[Consens et al., 2023]{Consens2023}
+Consens, M. E., Dufault, C., Wainberg, M., Forster, D., Karimzadeh, M., Goodarzi, H., Theis, F. J., Moses, A., and Wang, B..
+\textit{To Transformers and Beyond: Large Language Models for the Genome}.
+2023.
+\url{http://arxiv.org/abs/2311.07621}
+
+\bibitem[Ellington et al., 2024]{Ellington2024}
+Ellington, C. N., Sun, N., Ho, N., Tao, T., Mahbub, S., Li, D., Zhuang, Y., Wang, H., Song, L., and Xing, E. P..
+\textit{Accurate and General DNA Representations Emerge from Genome Foundation Models at Scale}.
+bioRxiv. 2024.
+\url{https://doi.org/10.1101/2024.12.01.625444}
+
+\bibitem[Consens et al., 2025]{Consens2025}
+Consens, M. E., Diaz-Navarro, A., Chu, V., Stein, L., He, H. H., Moses, A., and Wang, B..
+\textit{Interpreting Attention Mechanisms in Genomic Transformer Models: A Framework for Biological Insights}.
+bioRxiv. 2025.
+\url{https://doi.org/10.1101/2025.06.26.661544}
+
+\bibitem[Peter et al., 2018]{Peter2018}
+Peter, J., Chiara, M. D., Friedrich, A., Yue, J. X., Pflieger, D., Bergström, A., Sigwalt, A., Barre, B., Freel, K., Llored, A., Cruaud, C., Labadie, K., Aury, J. M., Istace, B., Lebrigand, K., Barbry, P., Engelen, S., Lemainque, A., Wincker, P., Liti, G., and Schacherer, J..
+\textit{Genome evolution across 1,011 Saccharomyces cerevisiae isolates}.
+Nature 556(7701), 339-344. 2018.
+\url{https://doi.org/10.1038/s41586-018-0030-5}
+
+\bibitem[ et al., 2023]{Dalla-Torre2023}
+Dalla-Torre, Hugo and Gonzalez, Liam and Revilla, Javier Mendoza and Carranza, Nicolas Lopez and Grzywaczewski, Adam Henryk and Oteri, Francesco and Dallago, Christian and Trop, Evan and Sirelkhatim, Hassan and Richard, Guillaume and Skwark, Marcin and Beguir, Karim and Lopez, Marie and Pierrot, Thomas
+\textit{The Nucleotide Transformer: Building and Evaluating Robust Foundation Models for Human Genomics}.
+bioRxiv. 2023.
+\url{https://doi.org/10.1101/2023.01.11.523679}
+
+\bibitem[Benegas et al., 2024]{Benegas2024}
+Benegas, G., Ye, C., Albors, C., Li, J. C., and Song, Y. S..
+\textit{Genomic Language Models: Opportunities and Challenges}.
+2024.
+\url{http://arxiv.org/abs/2407.11435}
+
+\bibitem[Nguyen et al., 2023]{Nguyen2023}
+Nguyen, E., Poli, M., Faizi, M., Thomas, A., Birch-Sykes, C., Wornow, M., Patel, A., Rabideau, C., Massaroli, S., Bengio, Y., Ermon, S., Baccus, S. A., and Ré, C..
+\textit{HyenaDNA: Long-Range Genomic Sequence Modeling at Single Nucleotide Resolution}.
+2023.
+\url{http://arxiv.org/abs/2306.15794}
+
+\bibitem[Zhou et al., 2024]{Zhou2024}
+Zhou, Z., Wu, W., Ho, H., Wang, J., Shi, L., Davuluri, R. V., Wang, Z., and Liu, H..
+\textit{DNABERT-S: Pioneering Species Differentiation with Species-Aware DNA Embeddings}.
+2024.
+\url{http://arxiv.org/abs/2402.08777}
+
+\bibitem[Lindsey et al., 2024]{Lindsey2024}
+Lindsey, L. M., Pershing, N. L., Habib, A., Dufault-Thompson, K., Stephens, W. Z., Blaschke, A. J., Jiang, X., and Sundar, H..
+\textit{The Impact of Tokenizer Selection in Genomic Language Models}.
+bioRxiv. 2024.
+\url{https://doi.org/10.1101/2024.09.09.612081}
+
+\bibitem[Ruan et al., 2025]{Ruan2025}
+Ruan, W., Lyu, Y., Zhang, J., Cai, J., Shu, P., Ge, Y., Lu, Y., Gao, S., Wang, Y., Wang, P., Zhao, L., Wang, T., Liu, Y., Fang, L., Liu, Z., Liu, Z., Li, Y., Wu, Z., Chen, J., Jiang, H., Pan, Y., Yang, Z., Chen, J., Liang, S., Zhang, W., Ma, T., Dou, Y., Zhang, J., Gong, X., Gan, Q., Zou, Y., Chen, Z., Qian, Y., Yu, S., Lu, J., Song, K., Wang, X., Sikora, A., Li, G., Li, X., Li, Q., Wang, Y., Zhang, L., Abate, Y., He, L., Zhong, W., Liu, R., Huang, C., Liu, W., Shen, Y., Ma, P., Zhu, H., Yan, Y., Zhu, D., and Liu, T..
+\textit{Large Language Models for Bioinformatics}.
+2025.
+\url{http://arxiv.org/abs/2501.06271}
+
+\bibitem[Schiff et al., 2024]{Schiff2024}
+Schiff, Y., Kao, C., Gokaslan, A., Dao, T., Gu, A., and Kuleshov, V..
+\textit{Caduceus: Bi-Directional Equivariant Long-Range DNA Sequence Modeling}.
+2024.
+\url{http://arxiv.org/abs/2403.03234}
+
+\bibitem[Consens et al., 2025]{Consens2025}
+Consens, M. E., Li, B., Poetsch, A. R., and Gilbert, S..
+\textit{Genomic language models could transform medicine but not yet}.
+npj Digital Medicine 8(1). 2025.
+\url{https://doi.org/10.1038/s41746-025-01603-4}
+
+\bibitem[Kan-Tor et al., 2024]{Kan-Tor2024}
+Kan-Tor, Y., Danziger, M. M., Zohar, E., Ninio, M., and Shimoni, Y..
+\textit{Does your model understand genes? A benchmark of gene properties for biological and text models}.
+2024.
+\url{http://arxiv.org/abs/2412.04075}
+
+\bibitem[Rajwade et al., 2024]{rajwade2024understanding}
+Rajwade, D., Wang, E., Satpathy, A., Brace, A., Guo, H., Ramanathan, A., Liu, S., and Anandkumar, A..
+\textit{Understanding Protein-DNA Interactions by Paying Attention to Protein and Genomics Foundation Models}.
+Neurips 2024 Workshop Foundation Models for Science: Progress, Opportunities, and Challenges. 2024.
+\url{https://openreview.net/forum?id=NifnqNdpaf}
+
+\end{thebibliography}
+
+
+
+\end{document}

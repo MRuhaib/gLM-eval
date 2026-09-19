@@ -1,17 +1,113 @@
+# ==============================================================================
+# Python & Environment Artifacts
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.ipynb_checkpoints/
+.pytest_cache/
+.vscode/
+
+# ==============================================================================
+# Data & Large Binary Files (>50MB or high-volume datasets)
+# ==============================================================================
+*.npz
+*.npy
+*.parquet
+*.zip
+*.tar
+*.gz
+*.tab
+*.tsv
+
+# Specific large generated CSVs and tables
+grover_embeddings_dataframe.csv
+seqStats.csv
+1011distanceMatrixBasedOnSNPS.tab
+*allDistances*.csv
+*allDistances_50*.csv
+
+# ==============================================================================
+# Submodule: Sequence Alignment
+# ==============================================================================
+Sequence Alignment/Hamming Scores/*
+!Sequence Alignment/Hamming Scores/.gitkeep
 Sequence\ Alignment/Hamming\ Scores/*
 !Sequence\ Alignment/Hamming\ Scores/.gitkeep
 
+# ==============================================================================
+# Submodule: Model Inference
+# ==============================================================================
+Model Inference/Full/*
+!Model Inference/Full/toNPZ.py
 Model\ Inference/Full/*
 !Model\ Inference/Full/toNPZ.py
-
+Model Inference/Genomes/*
 Model\ Inference/Genomes/*
+Model Inference/Embeddings/*
+Model\ Inference/Embeddings/*
 
+# ==============================================================================
+# Submodule: Embeddings Evaluation
+# ==============================================================================
+Embeddings Evaluation/Full Genome Embeddings/Alignment Scores/Embeddings/*
+!Embeddings Evaluation/Full Genome Embeddings/Alignment Scores/Embeddings/.gitkeep
 Embeddings\ Evaluation/Full\ Genome\ Embeddings/Alignment\ Scores/Embeddings/*
 !Embeddings\ Evaluation/Full\ Genome\ Embeddings/Alignment\ Scores/Embeddings/.gitkeep
 
+Embeddings Evaluation/Single Gene Embeddings/Embeddings Alignment/Embedding Alignment Scores/*
+!Embeddings Evaluation/Single Gene Embeddings/Embeddings Alignment/Embedding Alignment Scores/Cosine/cosineAlignment.py
+!Embeddings Evaluation/Single Gene Embeddings/Embeddings Alignment/Embedding Alignment Scores/Euclidean/.gitkeep
 Embeddings\ Evaluation/Single\ Gene\ Embeddings/Embeddings\ Alignment/Embedding\ Alignment\ Scores/*
 !Embeddings\ Evaluation/Single\ Gene\ Embeddings/Embeddings\ Alignment/Embedding\ Alignment\ Scores/Cosine/cosineAlignment.py
 !Embeddings\ Evaluation/Single\ Gene\ Embeddings/Embeddings\ Alignment/Embedding\ Alignment\ Scores/Euclidean/.gitkeep
 
+Embeddings Evaluation/100 Genes/100_genes_embeddings/
+Embeddings\ Evaluation/100\ Genes/100_genes_embeddings/
+
+# ==============================================================================
+# Submodule: Coding-Noncoding
+# ==============================================================================
+Coding-Noncoding/GB_sequence_embeddings/
+Coding-Noncoding/Attribution/Captum/outputs/
+Coding-Noncoding/Attribution/LXT/outputs/
+
+# ==============================================================================
+# Submodule: Mutation Sensitivity
+# ==============================================================================
+Mutation Sensitivity/1000_seqs/
+Mutation\ Sensitivity/1000_seqs/
+Mutation Sensitivity/Embeddings/Mutated/*
+Mutation Sensitivity/Embeddings/Original/*
 Mutation\ Sensitivity/Embeddings/Mutated/*
 Mutation\ Sensitivity/Embeddings/Original/*
+Mutation Sensitivity/Sequences/Mutated Sequences/
+Mutation\ Sensitivity/Sequences/Mutated\ Sequences/
+Mutation Sensitivity/Human Sequences/CDS/
+Mutation Sensitivity/Human Sequences/Coding/
+Mutation Sensitivity/Human Sequences/Genes/
+Mutation Sensitivity/Human Sequences/Non-coding/
+Mutation Sensitivity/Human Sequences/Embeddings/
+Mutation Sensitivity/GB sequences/*.parquet
+Mutation Sensitivity/GB sequences/*.csv
+
+# ==============================================================================
+# Submodule: Clade Clustering
+# ==============================================================================
+Clade Clustering/Variants Analysis/SNP_OneHot/
+Clade\ Clustering/Variants\ Analysis/SNP_OneHot/
+Clade Clustering/Variants Analysis/VCF/
+Clade\ Clustering/Variants\ Analysis/VCF/
+Clade Clustering/Variants Analysis/Results/
+Clade\ Clustering/Variants\ Analysis/Results/
+
+# ==============================================================================
+# Submodule: Yeast Gene Selection
+# ==============================================================================
+Yeast Gene Selection/All Genes/
+Yeast\ Gene\ Selection/All\ Genes/
+Yeast Gene Selection/100 Genes/*.fasta
+Yeast\ Gene\ Selection/100\ Genes/*.fasta
+Yeast Gene Selection/codingGenesCombined.txt
+Yeast\ Gene\ Selection/codingGenesCombined.txt
