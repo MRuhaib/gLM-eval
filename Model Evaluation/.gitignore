@@ -65,6 +65,12 @@ Embeddings\ Evaluation/Single\ Gene\ Embeddings/Embeddings\ Alignment/Embedding\
 
 Embeddings Evaluation/100 Genes/100_genes_embeddings/
 Embeddings\ Evaluation/100\ Genes/100_genes_embeddings/
+Embeddings Evaluation/100 Genes/100_genes_embeddings_distances/
+Embeddings\ Evaluation/100\ Genes/100_genes_embeddings_distances/
+Embeddings Evaluation/100 Genes/100_genes_hamming_distances/
+Embeddings\ Evaluation/100\ Genes/100_genes_hamming_distances/
+Embeddings Evaluation/100 Genes/100_genes_hamming_distances_6/
+Embeddings\ Evaluation/100\ Genes/100_genes_hamming_distances_6/
 
 # ==============================================================================
 # Submodule: Coding-Noncoding
@@ -72,6 +78,8 @@ Embeddings\ Evaluation/100\ Genes/100_genes_embeddings/
 Coding-Noncoding/GB_sequence_embeddings/
 Coding-Noncoding/Attribution/Captum/outputs/
 Coding-Noncoding/Attribution/LXT/outputs/
+Coding-Noncoding/Attribution/LXT/*.csv
+Coding-Noncoding/Attribution/Captum/*.csv
 
 # ==============================================================================
 # Submodule: Mutation Sensitivity
@@ -91,6 +99,10 @@ Mutation Sensitivity/Human Sequences/Non-coding/
 Mutation Sensitivity/Human Sequences/Embeddings/
 Mutation Sensitivity/GB sequences/*.parquet
 Mutation Sensitivity/GB sequences/*.csv
+Mutation Sensitivity/GB sequences/mutation_sensitivity_outputs/
+Mutation\ Sensitivity/GB\ sequences/mutation_sensitivity_outputs/
+Mutation Sensitivity/Results/
+Mutation\ Sensitivity/Results/
 
 # ==============================================================================
 # Submodule: Clade Clustering
@@ -101,6 +113,16 @@ Clade Clustering/Variants Analysis/VCF/
 Clade\ Clustering/Variants\ Analysis/VCF/
 Clade Clustering/Variants Analysis/Results/
 Clade\ Clustering/Variants\ Analysis/Results/
+Clade Clustering/Variants Analysis/100 genes/100_genes_encodings/
+Clade\ Clustering/Variants\ Analysis/100\ genes/100_genes_encodings/
+Clade Clustering/Variants Analysis/7 genes/Encodings/
+Clade\ Clustering/Variants\ Analysis/7\ genes/Encodings/
+Clade Clustering/Variants Analysis/7 genes/Genes/
+Clade\ Clustering/Variants\ Analysis/7\ genes/Genes/
+Clade Clustering/Variants Analysis/7 genes/VCF/
+Clade\ Clustering/Variants\ Analysis/7\ genes/VCF/
+Clade Clustering/Variants Analysis/7 genes/Results/
+Clade\ Clustering/Variants\ Analysis/7\ genes/Results/
 
 # ==============================================================================
 # Submodule: Yeast Gene Selection
