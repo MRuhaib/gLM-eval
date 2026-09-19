@@ -36,12 +36,25 @@ models = [
     "PoetschLab/GROVER",
 ]
 
+names = [
+    "Hyena-450k",
+    "Hyena-1M",
+    "GenaLM",
+    "NT-500M",
+    "NT-2.5B-MS",
+    "NT-2.5B-1000G",
+    "DNABERT-S",
+    "DNABERT-2",
+    "GPN",
+    "GROVER",
+]
+
 genes = [
-    ["YAL001C", 3573],
+    ["YAL026C", 4068],
     ["YAL007C", 648],
+    ["YAL001C", 3573],
     ["YAL018C", 978],
     ["YAL022C", 1554],
-    ["YAL026C", 4068],
     ["YJR136C", 1266],
     ["YPR192W", 918],
 ]
@@ -76,7 +89,7 @@ def evaluateScoreCorr(model, gene):
         f"../Sequence Alignment/Sequence Alignment Scores/{seqAlignmentMethod}/Genes/{gene}_scores.csv"
     )
     modelScores = pd.read_csv(
-        f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/Nirav Sir's Lab/Model Evaluation/Embeddings Evaluation/Single Gene Embeddings/Embeddings Alignment/Embedding Alignment Scores/{distMethod}/{gene}/{model.split('/')[1]}_{gene}_distances.csv"
+        f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/BiSECT Lab/Model Evaluation/Embeddings Evaluation/Single Gene Embeddings/Embeddings Alignment/Embedding Alignment Scores/{distMethod}/{gene}/{model.split('/')[1]}_{gene}_distances.csv"
     )  # remove hyena
     corr = modelScores.corrwith(seqScores)
     return corr, model
@@ -85,14 +98,14 @@ def evaluateScoreCorr(model, gene):
 def evaluateFlattenedCorr(model, gene):
     seqScores = (
         pd.read_csv(
-            f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/Nirav Sir's Lab/Model Evaluation/Sequence Alignment/Sequence Alignment Scores/{seqAlignmentMethod}/Genes/{gene}_scores.csv"
+            f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/BiSECT Lab/Model Evaluation/Sequence Alignment/Sequence Alignment Scores/{seqAlignmentMethod}/Genes/{gene}_scores.csv"
         )
         .to_numpy()
         .flatten()
     )
     modelScores = (
         pd.read_csv(
-            f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/Nirav Sir's Lab/Model Evaluation/Embeddings Evaluation/Single Gene Embeddings/Embeddings Alignment/Embedding Alignment Scores/{distMethod}/{gene}/{model.split('/')[1]}_{gene}_distances.csv"
+            f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/BiSECT Lab/Model Evaluation/Embeddings Evaluation/Single Gene Embeddings/Embeddings Alignment/Embedding Alignment Scores/{distMethod}/{gene}/{model.split('/')[1]}_{gene}_distances.csv"
         )
         .to_numpy()
         .flatten()
@@ -127,37 +140,30 @@ if __name__ == "__main__":
 
     for gene in genes:
         x, y = [], []
-        fig, ax = plt.subplots()
-        for model in models:
-            name = model.split("/")[1]
-            y.append(evaluateFlattenedCorr(model, gene[0]))
-            x.append(
-                name.split("-")[0]
-                + " "
-                + name.split("-")[1]
-                + "\n"
-                + name.split("-")[2]
-                + " "
-                + name.split("-")[3]
-                if len(name.split("-")) > 3
-                else name
-            )
+        fig, ax = plt.subplots(figsize=(12, 9))
+        for i, model in enumerate(models):
+            y.append(abs(evaluateFlattenedCorr(model, gene[0])))
+            x.append(names[i])
 
+        """
         ax.set_title(
-            f"{gene[0]} gene; {gene[1]} nucleotides\nCorrelation between the models' embeddings' pairwise euclidean distances and the strain sequences' pairwise sequence alignment scores",
-            fontsize=10,
+            f"{gene[0]} gene; {gene[1]} nucleotides\nCorrelation between embedding euclidean distances and sequence alignment scores",
+            fontsize=14,
         )
-        ax.stem(x, y)
-        ax.set(ylim=(-1, 0))
+        """
+        ax.stem(x, y, "black")
+        ax.set(ylim=(0, 1))
         plt.ylabel(
-            "Overall correlation between sequences' Needleman-Wunsch Alignment Scores and embeddings' Euclidean Distances",
-            fontsize=8,
+            "Magnitude of Negative Correlation",
+            fontsize=15,
         )
-        plt.xlabel("Genomic Language Model", fontsize=8)
-        plt.xticks(fontsize=7)
+        plt.xlabel("Genomic Language Model", fontsize=15)
+        plt.xticks(rotation=15, ha="right", fontsize=12)
+        plt.tight_layout(pad=2.0)
+
         plt.show()
         fig.savefig(
-            f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/Nirav Sir's Lab/Model Evaluation/Embeddings Evaluation/Single Gene Embeddings/Histograms/Euclidean/Overall/{gene[0]}_biopython.png"
+            f"C:/Users/Ruhaib/Downloads/IIT Stuff/Research/BiSECT Lab/Model Evaluation/Embeddings Evaluation/Single Gene Embeddings/Histograms/Euclidean/Strengths/{gene[0]}_biopython.png"
         )
 
     """
