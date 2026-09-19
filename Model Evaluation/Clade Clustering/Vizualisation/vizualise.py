@@ -27,7 +27,7 @@ models = [
     "PoetschLab/GROVER",
     "InstaDeepAI/nucleotide-transformer-500m-human-ref",
     "InstaDeepAI/nucleotide-transformer-2.5b-multi-species",
-    "InstaDeepAI/nucleotide-transformer-2.5b-1000g",
+    # "InstaDeepAI/nucleotide-transformer-2.5b-1000g",
     "zhihan1996/DNABERT-S",
     "zhihan1996/DNABERT-2-117M",
 ]
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     method = "UMAP"
 
-    fig, axs = plt.subplots(2, 5, figsize=(5, 5))
+    fig, axs = plt.subplots(3, 3, figsize=(10, 8))
     plt.rcParams["font.size"] = 6
     plt.rcParams["axes.labelsize"] = 6
     plt.rcParams["xtick.labelsize"] = plt.rcParams["ytick.labelsize"] = 6
@@ -110,8 +110,8 @@ if __name__ == "__main__":
         df = pd.DataFrame(results, columns=columns)
         df["Clades"] = clades
 
-        x_ind = count // 5
-        y_ind = count % 5
+        x_ind = count // 3
+        y_ind = count % 3
 
         sns.set_style("darkgrid", {"grid.color": ".6", "grid.linestyle": ":"})
         sns.scatterplot(
@@ -120,12 +120,13 @@ if __name__ == "__main__":
             y=columns[1],
             hue="Clades",
             s=8,
-            palette="hls",
+            palette="Set1",
             ax=axs[x_ind][y_ind],
         )
         # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
         # plt.legend(title="Clade", fontsize=7, title_fontsize=9, bbox_to_anchor=(1, 1))
-        axs[x_ind][y_ind].set_title(model.split("/")[1], fontsize=8)
+        """
+        axs[x_ind][y_ind].set_title(model.split("/")[1], fontsize=9)
         axs[x_ind][y_ind].set_xlabel(columns[0], fontsize=6)
         axs[x_ind][y_ind].tick_params(axis="both", which="major", labelsize=6)
         axs[x_ind][y_ind].tick_params(axis="both", which="minor", labelsize=5)
@@ -135,7 +136,25 @@ if __name__ == "__main__":
         axs[x_ind][y_ind].get_legend().remove()
         axs[x_ind][y_ind].set_aspect("equal", adjustable="box")
         count += 1
+        """
         # plt.axis("equal")
+        axs[x_ind][y_ind].set_title(model.split("/")[1], fontsize=12, pad=10)
+        axs[x_ind][y_ind].set_xlabel(columns[0], fontsize=10)
+        axs[x_ind][y_ind].set_ylabel(columns[1], fontsize=10)
+        axs[x_ind][y_ind].tick_params(axis="both", which="major", labelsize=8)
+        axs[x_ind][y_ind].set_xlim(-100, 100)
+        axs[x_ind][y_ind].set_ylim(-100, 100)
+
+        axs[x_ind][y_ind].grid(True, alpha=0.3, linewidth=0.5)
+
+        axs[x_ind][y_ind].get_legend().remove()
+        axs[x_ind][y_ind].set_aspect("equal", adjustable="box")
+
+        for spine in axs[x_ind][y_ind].spines.values():
+            spine.set_linewidth(1)
+            spine.set_color("black")
+
+        count += 1
 
     # plt.legend(title="Clade", fontsize=7, title_fontsize=9, bbox_to_anchor=(1, 1))
     handles, labels = axs[1][0].get_legend_handles_labels()
@@ -144,16 +163,18 @@ if __name__ == "__main__":
         handles,
         labels,
         title="Clade",
-        fontsize=7,
-        title_fontsize=8,
+        fontsize=10,
+        title_fontsize=12,
         loc="center right",
-        bbox_to_anchor=(0.97, 0.5),
+        bbox_to_anchor=(0.98, 0.5),  # Positioned on the right edge
+        frameon=True,
+        fancybox=False,
+        shadow=False,
     )
-    # fig.tight_layout(w_pad=0.01)
-    fig.subplots_adjust(right=0.85, top=0.9, wspace=0.4, hspace=-0.3)
-    fig.suptitle(
-        f"Scatter plots of the models' UMAP-reduced embeddings for the YAL001C gene",
-        fontsize=11,
-        y=0.9,
-    )
+    fig.tight_layout()
+    # fig.subplots_adjust(right=0.85, top=0.9, wspace=0.4, hspace=-0.3)
+    fig.subplots_adjust(right=0.85, wspace=0.3, hspace=0.3)
+
+    fig.savefig("./allUmaps3x3.png", dpi=300, bbox_inches="tight")
+    plt.show()
     plt.show()

@@ -161,7 +161,9 @@ def main(model, method="UMAP"):
     with open("../Data Labelling/labels.txt", "r+") as f:
         seqDict = eval(f.read())
         for element in seqDict:
-            clades.append(element["clade"])
+            clades.append(
+                element["clade"]
+            )  # labels.txt contains 1011 strains' clade labels in sequential order, which is the same order as the embeddings files. So we can just read them in order and append to clades list.
 
         """
         #with the npz files:
@@ -193,7 +195,7 @@ def main(model, method="UMAP"):
         embeddingsAvg.append(np.sum(embedding, axis=0) / len(embedding))
         embeddings.append(embedding[0])
 
-    # this is for traditional txt/json files
+    # this is for traditional txt/json files - single gene embeddings
 
     with open(
         f"../../Model Inference/Embeddings/Full/Hyena/{model}.json",  # remove hyena
